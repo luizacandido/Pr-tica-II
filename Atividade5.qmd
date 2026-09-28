@@ -1,0 +1,538 @@
+---
+title: "**PRÁTICA ESTATÍSTICA II**"
+subtitle: "**ATIVIDADE AVALIATIVA 5**"
+author: "Guilherme Gomes Rodrigues (rodrigues_guilherme@id.uff.br) <br> Luiza Braga Cândido (luizacandido@id.uff.br)"
+date: today
+date-format: "DD/MM/YYYY"
+institute: "Universidade Federal Fluminense"
+format:
+  revealjs:
+    css: custom.css
+    slide-number: true
+    incremental: false
+    transition: slide
+    background-transition: fade
+    width: 1280
+    height: 720
+    margin: 0.07
+    auto-stretch: false
+    fontsize: 22pt
+---
+
+# CONTEXTO
+
+## A ANOVA clássica
+
+:::::: box-grey
+::::: panel-tabset
+### O que testa
+
+-   Compara as **médias de** $k \geq 3$ populações simultaneamente.
+-   Responde: *as diferenças entre as médias amostrais são maiores do que o esperado pelo acaso?*
+
+$$
+H_0: \mu_1 = \mu_2 = \cdots = \mu_k
+$$
+
+$$
+H_1: \exists \; i \neq j \; \text{tal que} \; \mu_i \neq \mu_j
+$$
+
+-   A rejeição de $H_0$ indica que **pelo menos uma** média difere, mas **não diz qual**.
+
+### Por que não vários testes $t$
+
+::: scrollable
+-   Com $k$ grupos seriam necessárias $\binom{k}{2}$ comparações.
+-   Cada teste ao nível $\alpha$ tem probabilidade $\alpha$ de erro tipo I.
+-   A probabilidade de **ao menos um** falso positivo cresce rapidamente:
+
+$$
+\alpha_{\text{global}} = 1 - (1-\alpha)^{\binom{k}{2}}
+$$
+
+| $k$ | Comparações | $\alpha_{\text{global}}$ |
+|:---:|:-----------:|:------------------------:|
+|  3  |      3      |          0,143           |
+|  4  |      6      |          0,265           |
+|  5  |     10      |          0,401           |
+
+-   A ANOVA faz **um único teste global**, mantendo $\alpha = 5\%$.
+:::
+
+### Decomposição
+
+A variabilidade total é separada em duas partes:
+
+$$
+\underbrace{\sum_{i=1}^{k}\sum_{j=1}^{n_i} (y_{ij} - \bar{y})^2}_{SQ_{\text{total}}} =
+\underbrace{\sum_{i=1}^{k} n_i (\bar{y}_i - \bar{y})^2}_{SQ_{\text{entre}}} +
+\underbrace{\sum_{i=1}^{k}\sum_{j=1}^{n_i} (y_{ij} - \bar{y}_i)^2}_{SQ_{\text{dentro}}}
+$$
+
+::: nota
+$k$ = número de grupos; $n_i$ = tamanho do grupo $i$; $N = \sum n_i$; $\bar{y}_i$ = média do grupo $i$; $\bar{y}$ = média geral.
+:::
+:::::
+::::::
+
+## A estatística de teste $F$
+
+::::: box-grey
+:::: panel-tabset
+### A estatística
+
+::: box-formula
+$$
+F = \frac{QM_{\text{entre}}}{QM_{\text{dentro}}} =
+\frac{\dfrac{1}{k-1}\displaystyle\sum_{i=1}^{k} n_i (\bar{y}_i - \bar{y})^2}
+     {\dfrac{1}{N-k}\displaystyle\sum_{i=1}^{k}\sum_{j=1}^{n_i} (y_{ij} - \bar{y}_i)^2}
+\;\; \overset{H_0}{\sim} \;\; F_{(k-1,\; N-k)}
+$$
+:::
+
+-   **Numerador:** o quanto as médias dos grupos se afastam da média geral.
+-   **Denominador:** a variabilidade **dentro** dos grupos.
+-   Sob $H_0$, ambos estimam $\sigma^2$ e espera-se $F \approx 1$.
+-   Rejeita-se $H_0$ para **valores grandes** de $F$.
+
+### Tabela ANOVA
+
+| Fonte | g.l. | Soma de quadrados | Quadrado médio | $F$ |
+|:---|:--:|:--:|:--:|:--:|
+| Entre grupos | $k-1$ | $SQ_{\text{entre}}$ | $QM_{\text{entre}} = \frac{SQ_{\text{entre}}}{k-1}$ | $\frac{QM_{\text{entre}}}{QM_{\text{dentro}}}$ |
+| Dentro dos grupos | $N-k$ | $SQ_{\text{dentro}}$ | $QM_{\text{dentro}} = \frac{SQ_{\text{dentro}}}{N-k}$ |  |
+| Total | $N-1$ | $SQ_{\text{total}}$ |  |  |
+
+### No `R`
+
+``` r
+# ANOVA clássica
+modelo <- aov(escore ~ grupo, data = dados)
+summary(modelo)
+```
+::::
+:::::
+
+## Suposições do método
+
+:::::::: box-grey
+::::::: panel-tabset
+### As três suposições
+
+1.  **Independência** das observações.
+
+2.  **Normalidade** dos resíduos dentro de cada grupo: $$Y_{ij} \sim N(\mu_i,\; \sigma_i^2)$$
+
+3.  **Homocedasticidade** (homogeneidade de variâncias): $$\sigma_1^2 = \sigma_2^2 = \cdots = \sigma_k^2 = \sigma^2$$
+
+::: nota
+:::
+
+### Onde a homocedasticidade entra
+
+:::: scrollable
+O denominador da estatística $F$ é uma **variância combinada** de todos os grupos:
+
+::: box-formula
+$$
+QM_{\text{dentro}} = s_p^2 = \frac{\displaystyle\sum_{i=1}^{k} (n_i - 1)\, s_i^2}{N - k}
+$$
+:::
+
+-   É a **média ponderada** das variâncias amostrais, com pesos $(n_i - 1)$.
+-   Só faz sentido resumir todas as variâncias em **um único número** se elas forem, de fato, **iguais**.
+-   É daqui que sai a distribuição $F$ exata: o teorema de Cochran exige um $\sigma^2$ **comum** para que numerador e denominador sejam qui-quadrados independentes.
+
+$$
+\frac{SQ_{\text{dentro}}}{\sigma^2} \sim \chi^2_{(N-k)}
+\qquad
+\frac{SQ_{\text{entre}}}{\sigma^2} \overset{H_0}{\sim} \chi^2_{(k-1)}
+$$
+::::
+
+### Como verificar
+
+-   **Teste de Levene**:robusto a desvios de normalidade (preferido na prática).
+-   **Teste de Bartlett**: mais potente, porém sensível à não normalidade.
+
+$$
+H_0: \sigma_1^2 = \cdots = \sigma_k^2
+\qquad \text{vs} \qquad
+H_1: \exists \; i \neq j : \sigma_i^2 \neq \sigma_j^2
+$$
+
+``` r
+car::leveneTest(escore ~ grupo, data = dados)
+bartlett.test(escore ~ grupo, data = dados)
+```
+
+::: nota
+Rejeitar $H_0$ nesses testes é o sinal de que a ANOVA clássica **não deve** ser usada.
+:::
+:::::::
+::::::::
+
+## O problema da heterogeneidade
+
+::::::: box-grey
+:::::: panel-tabset
+### O que acontece
+
+Quando $\sigma_i^2$ são diferentes, $s_p^2$ deixa de estimar algo que exista:
+
+-   A estatística **não segue mais** a distribuição $F_{(k-1,\,N-k)}$.
+-   O valor-p calculado perde a sua validade estatística.
+-   O nível de significância nominal (ex: $\alpha = 5\%$) deixa de ser garantido.
+
+::: nota
+O problema não é o cálculo de $F$ em si, é a **distribuição de referência** usada para obter o valor-p.
+:::
+
+### Por que o viés aparece
+
+::: scrollable
+O ponto crítico é a **combinação** entre variâncias e tamanhos de grupo:
+
+-   **Pareamento negativo** — grupo **pequeno** com variância **grande**:
+    -   $s_p^2$ fica **subestimado** (o grupo grande e homogêneo domina a média ponderada);
+    -   $F$ fica **inflado** → **excesso de falsos positivos**;
+    -   o $\alpha$ real pode passar de **10% a 15%** com $\alpha$ nominal de 5%.
+-   **Pareamento positivo** — grupo **grande** com variância **grande**:
+    -   $s_p^2$ fica **superestimado**;
+    -   $F$ fica **deflacionado** → teste **conservador**, com **perda de poder**.
+
+Em delineamentos **balanceados** ($n_1 = \cdots = n_k$) a ANOVA é razoavelmente robusta. O problema é grave em delineamentos **desbalanceados** — que é a regra em estudos observacionais.
+:::
+
+### No artigo da Atividade 4
+
+::: scrollable
+O artigo sobre **rastreamento de sarcopenia** enfrentou exatamente esse cenário ao comparar os escores SARC-F e SARC-Calf entre classes econômicas:
+
+| Classe | $n_i$ | SARC-Calf: média $\pm$ DP |
+|:-------|:-----:|:-------------------------:|
+| A      |   3   |      0,33 $\pm$ 0,58      |
+| B      |   9   |      3,44 $\pm$ 5,10      |
+| C      |  65   |      7,40 $\pm$ 5,54      |
+| D e E  |  13   |      8,00 $\pm$ 6,48      |
+
+-   Grupos fortemente **desbalanceados** ($n$ de 3 a 65);
+-   Desvios-padrão de **0,58 a 6,48** — quase **11 vezes** de diferença;
+-   Diante da violação da homocedasticidade, as autoras adotaram a **correção de Welch** e o pós-teste de **Games-Howell**.
+:::
+::::::
+:::::::
+
+## Comparações múltiplas: o teste de Tukey
+
+:::::::: box-grey
+::::::: panel-tabset
+### Para que serve
+
+-   A ANOVA indica que **existe** diferença; o Tukey indica **entre quais pares**.
+-   Compara **todos os** $\binom{k}{2}$ pares controlando a taxa de erro por **experimento**:
+
+$$
+P(\text{ao menos um falso positivo entre todas as comparações}) \leq \alpha
+$$
+
+-   Baseia-se na distribuição da **amplitude studentizada** $q_{(\alpha;\, k,\, N-k)}$.
+
+### A estatística
+
+Para o par de grupos $i$ e $j$ (versão Tukey-Kramer, que admite $n_i \neq n_j$):
+
+::: box-formula
+$$
+q_{ij} = \frac{\bar{y}_i - \bar{y}_j}
+{\sqrt{\dfrac{QM_{\text{dentro}}}{2}\left(\dfrac{1}{n_i} + \dfrac{1}{n_j}\right)}}
+$$
+:::
+
+No caso **balanceado** ($n_i = n_j = n$), reduz-se a:
+
+$$
+q_{ij} = \frac{\bar{y}_i - \bar{y}_j}{\sqrt{QM_{\text{dentro}}/n}}
+$$
+
+Rejeita-se a igualdade do par se $|q_{ij}| > q_{(\alpha;\, k,\, N-k)}$.
+
+### Intervalo de confiança
+
+::: box-formula
+$$
+(\bar{y}_i - \bar{y}_j) \;\pm\; \frac{q_{(\alpha;\, k,\, N-k)}}{\sqrt{2}}
+\sqrt{QM_{\text{dentro}}\left(\frac{1}{n_i} + \frac{1}{n_j}\right)}
+$$
+:::
+
+O par é considerado diferente quando o intervalo **não contém o zero**.
+
+``` r
+TukeyHSD(aov(escore ~ grupo, data = dados))
+```
+
+### O que ele assume
+
+:::: scrollable
+Repare nos **dois pontos frágeis** da fórmula do Tukey:
+
+1.  Usa $QM_{\text{dentro}}$: a **mesma variância combinada** em **todas** as comparações;
+2.  Usa $N-k$ graus de liberdade: os **mesmos** para **todos** os pares.
+
+::: nota
+Ou seja: o Tukey herda integralmente a suposição de homocedasticidade da ANOVA clássica. Se ela falha, o Tukey falha junto.
+:::
+::::
+:::::::
+::::::::
+
+# A ANOVA DE WELCH
+
+## A ideia central
+
+:::::::::: box-grey
+::::::::: panel-tabset
+### O que muda
+
+:::: scrollable
+A ANOVA clássica trata todos os grupos como se tivessem a **mesma precisão**. A ANOVA de Welch abandona essa ideia:
+
+-   **Não combina** as variâncias: cada grupo entra com a **sua própria** $s_i^2$;
+-   **Pondera** cada grupo pela sua **precisão**, grupos mais homogêneos pesam mais;
+-   **Ajusta os graus de liberdade** do denominador pela aproximação de **Welch-Satterthwaite**;
+-   Mantém $H_0: \mu_1 = \cdots = \mu_k$ — **a hipótese testada é a mesma**.
+
+::: nota
+A lógica é a mesma do **teste** $t$ de Welch para duas populações, generalizada para $k$ grupos. De fato, para $k = 2$, a estatística de Welch é exatamente o quadrado do $t$ de Welch.
+:::
+::::
+
+### Os pesos
+
+O peso de cada grupo é o **inverso da variância da sua média**, ou seja, sua precisão:
+
+::: box-formula
+$$
+w_i = \frac{n_i}{s_i^2}
+\qquad\qquad
+W = \sum_{i=1}^{k} w_i
+$$
+:::
+
+A média geral deixa de ser simples e passa a ser **ponderada**:
+
+::: box-formula
+$$
+\tilde{y}_w = \frac{1}{W}\sum_{i=1}^{k} w_i \,\bar{y}_i
+$$
+:::
+
+::: nota
+Grupo com variância **grande** → peso **pequeno** → influencia **menos** o resultado. É exatamente o oposto do que acontece na ANOVA clássica, em que um grupo grande e disperso domina a variância combinada.
+:::
+
+### Suposições
+
+-   **Independência** das observações, continua **necessária**;
+-   **Normalidade** dentro de cada grupo, continua **necessária**;
+-   **Homocedasticidade**: **dispensada**.
+
+::: nota
+A correção de Welch resolve a heterogeneidade de variâncias, **não** a falta de normalidade. Para assimetria forte, o caminho é Kruskal-Wallis ou métodos robustos.
+:::
+:::::::::
+::::::::::
+
+## A estatística de Welch
+
+:::::::::: box-grey
+::::::::: panel-tabset
+### A estatística
+
+::: box-formula
+$$
+F_W = \frac{\dfrac{1}{k-1}\displaystyle\sum_{i=1}^{k} w_i (\bar{y}_i - \tilde{y}_w)^2}
+{1 + \dfrac{2(k-2)}{k+1}\,\Lambda}
+\;\;\overset{H_0}{\sim}\;\; F_{(k-1,\;\nu_2)}
+$$
+:::
+
+em que
+
+$$
+\Lambda = \frac{3}{k^2-1}\sum_{i=1}^{k}
+\frac{\left(1 - \dfrac{w_i}{W}\right)^2}{n_i - 1}
+$$
+
+::: nota
+O numerador é a soma de quadrados entre grupos **ponderada pelas precisões**. O denominador é um fator de correção que cresce conforme as variâncias se afastam umas das outras.
+:::
+
+### Graus de liberdade
+
+Os graus de liberdade do numerador continuam $k-1$, mas os do **denominador** passam a ser estimados:
+
+::: box-formula
+$$
+\nu_1 = k - 1
+\qquad\qquad
+\nu_2 = \frac{1}{\Lambda} = \frac{k^2-1}{3\displaystyle\sum_{i=1}^{k}\frac{\left(1 - \frac{w_i}{W}\right)^2}{n_i-1}}
+$$
+:::
+
+-   $\nu_2$ **não é** $N-k$ e em geral é **bem menor**;
+-   Quanto **mais heterogêneas** as variâncias, **menores** os graus de liberdade;
+-   Menos graus de liberdade → distribuição de referência com **caudas mais pesadas** → **valor crítico maior** → o teste fica **mais exigente**, compensando a incerteza extra.
+
+### A lógica por trás
+
+:::: scrollable
+**Por que isso funciona?**
+
+1.  Se não podemos supor um $\sigma^2$ comum, não faz sentido estimá-lo. Então cada grupo usa a sua própria $s_i^2$.
+
+2.  Grupos com variância alta carregam **menos informação** sobre a posição da sua média. Ponderar por $w_i = n_i/s_i^2$ dá a cada grupo o peso que a **sua precisão** justifica.
+
+3.  Estimar $k$ variâncias separadas custa mais **incerteza** do que estimar uma só. O preço é pago na redução de $\nu_2$.
+
+**Caso particular:** se $s_1^2 = \cdots = s_k^2$, então todos os $w_i/W \to n_i/N$, $\Lambda \to 0$, $\nu_2 \to N-k$ e $F_W \to F$ da ANOVA clássica.
+
+::: nota
+A ANOVA clássica é um **caso particular** da de Welch. Por isso o custo de usar Welch por precaução é pequeno — e é por isso que vários autores recomendam adotá-la como padrão.
+:::
+::::
+
+### No `R`
+
+``` r
+# ANOVA de Welch
+oneway.test(escore ~ grupo, data = dados, var.equal = FALSE)
+
+# Comparação: ANOVA clássica
+oneway.test(escore ~ grupo, data = dados, var.equal = TRUE)
+```
+
+::: nota
+Repare que `oneway.test()` traz `var.equal = FALSE` como **padrão** no `R`.
+:::
+:::::::::
+::::::::::
+
+# O TESTE DE GAMES-HOWELL
+
+## Do Tukey ao Games-Howell
+
+::::::::: box-grey
+:::::::: panel-tabset
+### O que muda
+
+:::: scrollable
+O Games-Howell aplica ao teste de Tukey a **mesma correção** que Welch aplicou à ANOVA:
+
+1.  **Troca** $QM_{\text{dentro}}$ pelas variâncias **individuais** $s_i^2$ e $s_j^2$ de cada par;
+
+2.  **Troca os graus de liberdade fixos** $N-k$ por graus de liberdade **específicos de cada par**, via Welch-Satterthwaite;
+
+3.  **Mantém** a distribuição da **amplitude studentizada** $q$, ou seja, mantém o controle do erro por experimento.
+
+::: nota
+Cada par passa a ser julgado com a sua própria régua. Duas comparações com a mesma diferença de médias podem receber conclusões distintas, dependendo da dispersão dos grupos envolvidos.
+:::
+::::
+
+### A estatística
+
+::: box-formula
+$$
+q_{ij} = \frac{\bar{y}_i - \bar{y}_j}
+{\sqrt{\dfrac{1}{2}\left(\dfrac{s_i^2}{n_i} + \dfrac{s_j^2}{n_j}\right)}}
+$$
+:::
+
+**Compare com o Tukey:**
+
+$$
+\underbrace{\sqrt{\frac{QM_{\text{dentro}}}{2}\left(\frac{1}{n_i}+\frac{1}{n_j}\right)}}_{\text{Tukey: variância combinada}}
+\qquad\longrightarrow\qquad
+\underbrace{\sqrt{\frac{1}{2}\left(\frac{s_i^2}{n_i}+\frac{s_j^2}{n_j}\right)}}_{\text{Games-Howell: variâncias do par}}
+$$
+
+### Graus de liberdade
+
+Para cada par $(i,j)$, os graus de liberdade vêm da aproximação de **Welch-Satterthwaite**:
+
+::: box-formula
+$$
+\nu_{ij} = \frac{\left(\dfrac{s_i^2}{n_i} + \dfrac{s_j^2}{n_j}\right)^{2}}
+{\dfrac{\left(s_i^2/n_i\right)^{2}}{n_i - 1} + \dfrac{\left(s_j^2/n_j\right)^{2}}{n_j - 1}}
+$$
+:::
+
+-   Cada par tem **o seu próprio** $\nu_{ij}$;
+-   Rejeita-se a igualdade do par se $|q_{ij}| > q_{(\alpha;\, k,\, \nu_{ij})}$.
+
+### Intervalo de confiança
+
+::: box-formula
+$$
+(\bar{y}_i - \bar{y}_j) \;\pm\; \frac{q_{(\alpha;\, k,\, \nu_{ij})}}{\sqrt{2}}
+\sqrt{\frac{s_i^2}{n_i} + \frac{s_j^2}{n_j}}
+$$
+:::
+
+``` r
+# Games-Howell
+rstatix::games_howell_test(dados, escore ~ grupo)
+
+# Alternativa
+PMCMRplus::gamesHowellTest(escore ~ grupo, data = dados)
+```
+::::::::
+:::::::::
+
+## Resumo do raciocínio
+
+:::: box-grey
+::: {style="font-size: 88%;"}
+|   | **Variâncias homogêneas** | **Variâncias heterogêneas** |
+|:---|:--:|:--:|
+| **Teste global** | ANOVA clássica | **ANOVA de Welch** |
+| **Comparações múltiplas** | Tukey (HSD) | **Games-Howell** |
+
+<br>
+
+**O fio condutor das duas correções é o mesmo:**
+
+1.  Abandonar a **variância combinada** e usar a variância **de cada grupo**;
+2.  Ponderar cada grupo pela sua **precisão**;
+3.  **Pagar o preço** dessa flexibilidade com uma **redução dos graus de liberdade**.
+:::
+::::
+
+# REFERÊNCIAS
+
+## Referências
+
+:::: box-grey
+::: {style="font-size: 60%;"}
+1.  WELCH, B. L. On the comparison of several mean values: an alternative approach. **Biometrika**, v. 38, n. 3/4, p. 330-336, 1951.
+
+2.  GAMES, P. A.; HOWELL, J. F. Pairwise multiple comparison procedures with unequal *n*'s and/or variances: a Monte Carlo study. **Journal of Educational Statistics**, v. 1, n. 2, p. 113-125, 1976.
+
+3.  TUKEY, J. W. Comparing individual means in the analysis of variance. **Biometrics**, v. 5, n. 2, p. 99-114, 1949.
+
+4.  SATTERTHWAITE, F. E. An approximate distribution of estimates of variance components. **Biometrics Bulletin**, v. 2, n. 6, p. 110-114, 1946.
+
+5.  MONTGOMERY, D. C. **Design and analysis of experiments**. 10. ed. Hoboken: Wiley, 2019.
+
+6.  DELACRE, M.; LEYS, C.; MORA, Y. L.; LAKENS, D. Taking parametric assumptions seriously: arguments for the use of Welch's *F*-test instead of the classical *F*-test in one-way ANOVA. **International Review of Social Psychology**, v. 32, n. 1, p. 1-12, 2019.
+
+7.  CRISTALDO, M. R. A.; GUANDALINI, V. R.; FARIA, S. O.; SPEXOTO, M. C. B. Rastreamento do risco de sarcopenia em adultos com 50 anos ou mais hospitalizados. **Revista Brasileira de Geriatria e Gerontologia**, v. 24, n. 2, e210016, 2021.
+:::
+::::
+
+##  {.center}
+
+<br><br>
